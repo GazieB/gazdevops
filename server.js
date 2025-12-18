@@ -99,7 +99,7 @@ Write this clearly for Jet2 Assisted Travel internal notes.
 
 // Friendly route to open the costing page
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "adapted_costing.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 /* =========================
