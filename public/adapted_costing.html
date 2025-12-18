@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Adapted Transfer Costing</title>
+
+    
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+    
+    <div class="header">Adapted Transfer Costing</div>
+
+    <div class="container">
+
+        
+        <div class="card">
+            <h2>Enter Costing Details</h2>
+
+            <form id="costForm">
+
+                <table class="input-table">
+                    <tr>
+                        <th>Field</th>
+                        <th>Value</th>
+                    </tr>
+
+                    <tr>
+                        <td>Adapted transfer cost each way (£):</td>
+                        <td><input type="number" name="adaptedEachWay" step="0.01" required></td>
+                    </tr>
+
+                    <tr>
+                        <td>Coach transfer cost per person (£):</td>
+                        <td><input type="number" name="coachPerPerson" step="0.01" required></td>
+                    </tr>
+
+                    <tr>
+                        <td>Number of passengers:</td>
+                        <td><input type="number" name="pax" required></td>
+                    </tr>
+                </table>
+
+                <button class="btn" type="submit">Generate Notes</button>
+            </form>
+
+            <div class="message" id="statusMsg"></div>
+        </div>
+
+        
+        <div class="card hidden" id="resultCard">
+            <h2>Generated Notes</h2>
+
+            
+            <div class="result-header">Notes</div>
+
+            
+            <div id="outputBox" class="note-box"></div>
+
+            <button class="btn btn-secondary btn-small" onclick="copyNotes()">Copy Notes</button>
+        </div>
+
+    </div>
+
+    
+    <script>
+        document.getElementById("costForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const status = document.getElementById("statusMsg");
+            const resultCard = document.getElementById("resultCard");
+            const outputBox = document.getElementById("outputBox");
+
+            status.textContent = "Generating notes please wait GazieB is thinking";
+            resultCard.classList.add("hidden");
+
+            const formData = new URLSearchParams(new FormData(e.target));
+
+            const res = await fetch("/generate", {
+                method: "POST",
+                body: formData
+            });
+
+            const text = await res.text();
+
+            outputBox.textContent = text;     
+            resultCard.classList.remove("hidden");
+            status.textContent = "";
+        });
+
+        function copyNotes() {
+            const box = document.getElementById("outputBox");
+            navigator.clipboard.writeText(box.textContent);
+            alert("Notes copied to clipboard.");
+        }
+    </script>
+
+</body>
+</html>
