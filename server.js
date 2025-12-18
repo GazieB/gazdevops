@@ -12,6 +12,11 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", service: "gaz-dev-ops" });
+});
+
+
 app.listen(port, () => {
     console.log(`🚀 Gaz Dev Ops running on port ${port}`);
 });
