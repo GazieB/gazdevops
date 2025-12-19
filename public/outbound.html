@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Formal Note Generator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body class="note-page">
+
+    
+    <div class="header">Formal Note Generator</div>
+
+    <div class="container">
+
+    
+        <div class="card">
+            <h2>Original Notes notes</h2>
+
+            <p>
+                Please enter your notes below
+            </p>
+
+            <textarea
+    id="rawNotes"
+    class="note-box"
+    rows="10"
+    placeholder="Please enter your notes here"
+></textarea>
+
+
+            <button class="btn" onclick="generateNotes()">
+                Correct notes
+            </button>
+
+            <div id="statusMsg" style="margin-top:10px;"></div>
+        </div>
+
+        
+        <div class="card">
+            <h2>Generated Formal Notes</h2>
+
+            <textarea
+                id="cleanNotes"
+                class="note-box"
+                readonly
+                placeholder="Fixed notes will display here."
+            ></textarea>
+
+            <button
+                class="btn btn-secondary btn-small"
+                onclick="copyNotes()"
+            >
+                Copy Notes
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        async function generateNotes() {
+            const input = document.getElementById("rawNotes").value.trim();
+            const output = document.getElementById("cleanNotes");
+            const status = document.getElementById("statusMsg");
+
+            if (!input) {
+                status.textContent = "Please enter some notes to generate.";
+                return;
+            }
+
+            status.textContent = "Generating formal notes, please wait.. Gazie in has a small brain :)";
+            output.value = "";
+
+            try {
+                const res = await fetch("/rewrite", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ text: input })
+                });
+
+                if (!res.ok) {
+                    throw new Error("AI request failed");
+                }
+
+                const text = await res.text();
+                output.value = text;
+                status.textContent = "";
+
+            } catch (err) {
+                console.error(err);
+                status.textContent = "An error occurred while generating notes.";
+            }
+        }
+
+        async function medicalAdvice() {
+            const input = document.getElementById("rawNotes").value.trim();
+            const output = document.getElementById("cleanNotes");
+            const status = document.getElementById("statusMsg");
+
+            if (!input) {
+                status.textContent = "Medical advice.";
+                return;
+            }
+
+            status.textContent = "Generating formal notes, please wait.. Gazie in has a small brain :)";
+            output.value = "";
+
+            try {
+                const res = await fetch("/rewrite", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ text: input })
+                });
+
+                if (!res.ok) {
+                    throw new Error("AI request failed");
+                }
+
+                const text = await res.text();
+                output.value = text;
+                status.textContent = "";
+
+            } catch (err) {
+                console.error(err);
+                status.textContent = "An error occurred while finding infomation please try again.";
+            }
+        }
+
+        function copyNotes() {
+            const text = document.getElementById("cleanNotes").value;
+            if (!text) return;
+
+            navigator.clipboard.writeText(text);
+            alert("Notes copied to clipboard.");
+        }
+    </script>
+
+</body>
+</html>
