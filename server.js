@@ -1,124 +1,134 @@
 const express = require("express");
+const OpenAI = require("openai");
 const path = require("path");
 require("dotenv").config();
 
-const OpenAI = require("openai");
-const { poolPromise, sql } = require("./db");
-
 const app = express();
-const PORT = process.env.PORT || 10000;
+const port = 3000;
 
-/* =========================
-   Middleware
-========================= */
+/* ---------------- OPENAI SETUP ---------------- */
+
+const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
+
+/* ---------------- MIDDLEWARE ---------------- */
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Serve static files from /public
+// Serve static frontend files
 app.use(express.static(path.join(__dirname, "public")));
 
-/* =========================
-   OpenAI Client
-========================= */
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+/* ---------------- ROUTES ---------------- */
 
-/* =========================
-   Routes
-========================= */
+/**
+ * Rewrite informal notes into professional internal notes
+ */
+app.post("/rewrite", async (req, res) => {
+    try {
+        const { text } = req.body;
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", service: "Gaz Dev Ops" });
-});
-
-// Optional DB test
-app.get("/db-test", async (req, res) => {
-  try {
-    const pool = await poolPromise;
-    const result = await pool.request().query("SELECT GETDATE() AS now");
-    res.json({
-      success: true,
-      time: result.recordset[0].now
-    });
-  } catch (err) {
-    console.error("DB test failed:", err);
-    res.status(500).json({ success: false, error: "DB connection failed" });
-  }
-});
-
-// AI generate costing notes
-app.post("/generate", async (req, res) => {
-  try {
-    const { adaptedEachWay, coachPerPerson, pax } = req.body;
-
-    if (!adaptedEachWay || !coachPerPerson || !pax) {
-      return res.status(400).send("Missing input values");
-    }
-
-    const adaptedTotal = adaptedEachWay * 2;
-    const coachTotal = coachPerPerson * pax;
-    const extraCost = adaptedTotal - coachTotal;
-
-    const prompt = `
------Adapted transfer Costing----
-
-Adapted transfer cost each way: £${adaptedEachWay}
-Total adapted transfer cost (return): £${adaptedTotal}
-Coach transfer cost per person: £${coachPerPerson}
-Passengers: ${pax}
-Total coach cost: £${coachTotal}
-Additional cost to log: £${extraCost}
-
-Write this clearly for Jet2 Assisted Travel internal notes.
-`;
-
-    const completion = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You write clear, professional British English notes for internal airline use."
-        },
-        {
-          role: "user",
-          content: prompt
+        if (!text) {
+            return res.status(400).send("No text provided.");
         }
-      ],
-      temperature: 0.2
-    });
 
-    res.send(completion.choices[0].message.content);
-  } catch (err) {
-    console.error("Generate error:", err);
-    res.status(500).send("AI generation failed");
-  }
+        const completion = await client.chat.completions.create({
+            model: "gpt-4.1-mini",
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "Rewrite the following notes into clear, formal, professional British English suitable for official internal records."
+                },
+                {
+                    role: "user",
+                    content: text
+                }
+            ],
+            temperature: 0.2
+        });
+
+        res.send(completion.choices[0].message.content);
+
+    } catch (err) {
+        console.error("❌ Rewrite error:", err);
+        res.status(500).send("Error rewriting notes.");
+    }
 });
 
-// Friendly route to open the costing page
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+/**
+ * Explain a medical condition for non-clinical staff
+ */
+app.post("/medical-term", async (req, res) => {
+    try {
+        const { term } = req.body;
+
+        if (!term) {
+            return res.status(400).send("No medical term provided.");
+        }
+
+        const completion = await client.chat.completions.create({
+            model: "gpt-4.1-mini",
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "Explain the following medical condition in clear, detailed British English suitable for non-clinical airline staff. Include what it means, common symptoms, and general impact on daily life. Do not provide medical advice or diagnosis."
+                },
+                {
+                    role: "user",
+                    content: term
+                }
+            ],
+            temperature: 0.2
+        });
+
+        res.send(completion.choices[0].message.content);
+
+    } catch (err) {
+        console.error("❌ Medical error:", err);
+        res.status(500).send("Error explaining medical condition.");
+    }
 });
 
-/* =========================
-   Catch-all (LAST)
-========================= */
-app.get("*", (req, res) => {
-  res.status(404).send("Route not found");
+/**
+ * Retrieve information about EMD / mobility equipment by make & model
+ */
+app.post("/emd-info", async (req, res) => {
+    try {
+        const { model } = req.body;
+
+        if (!model) {
+            return res.status(400).send("No EMD model provided.");
+        }
+
+        const completion = await client.chat.completions.create({
+            model: "gpt-4.1-mini",
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "Provide clear, factual information about mobility or medical equipment for airline staff. Given a make and model, explain what the equipment is, how it is used, any typical size, weight, or battery details if commonly known, and general airline travel considerations. Do not confirm acceptance or provide operational approval."
+                },
+                {
+                    role: "user",
+                    content: model
+                }
+            ],
+            temperature: 0.2
+        });
+
+        res.send(completion.choices[0].message.content);
+
+    } catch (err) {
+        console.error("❌ EMD error:", err);
+        res.status(500).send("Error retrieving EMD information.");
+    }
 });
 
-/* =========================
-   Start Server
-========================= */
-app.listen(PORT, async () => {
-  console.log(`🚀 Gaz Dev Ops running on port ${PORT}`);
+/* ---------------- SERVER START ---------------- */
 
-  try {
-    await poolPromise;
-    console.log("✅ Connected to AWS RDS (SQL Server)");
-  } catch (err) {
-    console.error("❌ Database connection failed:", err.message);
-  }
+app.listen(port, () => {
+    console.log(`✅ Server running at http://localhost:${port}`);
 });
