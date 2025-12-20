@@ -3,19 +3,18 @@
 <head>
     <meta charset="utf-8">
     <title>Adapted Transfer Costing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    
     <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
 
-    
     <div class="header">Adapted Transfer Costing</div>
 
     <div class="container">
 
-        
+        <!-- INPUT CARD -->
         <div class="card">
             <h2>Enter Costing Details</h2>
 
@@ -29,42 +28,70 @@
 
                     <tr>
                         <td>Adapted transfer cost each way (£):</td>
-                        <td><input type="number" name="adaptedEachWay" step="0.01" required></td>
+                        <td>
+                            <input
+                                type="number"
+                                name="adaptedEachWay"
+                                step="0.01"
+                                required
+                            >
+                        </td>
                     </tr>
 
                     <tr>
                         <td>Coach transfer cost per person (£):</td>
-                        <td><input type="number" name="coachPerPerson" step="0.01" required></td>
+                        <td>
+                            <input
+                                type="number"
+                                name="coachPerPerson"
+                                step="0.01"
+                                required
+                            >
+                        </td>
                     </tr>
 
                     <tr>
                         <td>Number of passengers:</td>
-                        <td><input type="number" name="pax" required></td>
+                        <td>
+                            <input
+                                type="number"
+                                name="pax"
+                                required
+                            >
+                        </td>
                     </tr>
                 </table>
 
-                <button class="btn" type="submit">Generate Notes</button>
+                <button class="btn" type="submit">
+                    Generate Notes
+                </button>
             </form>
 
             <div class="message" id="statusMsg"></div>
         </div>
 
-        
+        <!-- OUTPUT CARD -->
         <div class="card hidden" id="resultCard">
             <h2>Generated Notes</h2>
 
-            
-            <div class="result-header">Notes</div>
+            <textarea
+                id="outputBox"
+                class="note-box"
+                rows="10"
+                readonly
+            ></textarea>
 
-            
-            <div id="outputBox" class="note-box"></div>
-
-            <button class="btn btn-secondary btn-small" onclick="copyNotes()">Copy Notes</button>
+            <button
+                class="btn btn-secondary btn-small"
+                onclick="copyNotes()"
+            >
+                Copy Notes
+            </button>
         </div>
 
     </div>
 
-    
+    <!-- SCRIPT -->
     <script>
         document.getElementById("costForm").addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -73,26 +100,42 @@
             const resultCard = document.getElementById("resultCard");
             const outputBox = document.getElementById("outputBox");
 
-            status.textContent = "Generating notes please wait GazieB is thinking";
+            status.textContent = "Generating notes, please wait…";
             resultCard.classList.add("hidden");
+            outputBox.value = "";
 
-            const formData = new URLSearchParams(new FormData(e.target));
+            const formData = new FormData(e.target);
 
-            const res = await fetch("/generate", {
-                method: "POST",
-                body: formData
-            });
+            const data = {
+                adaptedEachWay: formData.get("adaptedEachWay"),
+                coachPerPerson: formData.get("coachPerPerson"),
+                pax: formData.get("pax")
+            };
 
-            const text = await res.text();
+            try {
+                const res = await fetch("/adapted-transfer", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                });
 
-            outputBox.textContent = text;     
-            resultCard.classList.remove("hidden");
-            status.textContent = "";
+                const text = await res.text();
+
+                outputBox.value = text;
+                resultCard.classList.remove("hidden");
+                status.textContent = "";
+
+            } catch (err) {
+                console.error(err);
+                status.textContent = "Something went wrong. Please try again.";
+            }
         });
 
         function copyNotes() {
             const box = document.getElementById("outputBox");
-            navigator.clipboard.writeText(box.textContent);
+            navigator.clipboard.writeText(box.value);
             alert("Notes copied to clipboard.");
         }
     </script>
