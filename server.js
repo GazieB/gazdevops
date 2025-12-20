@@ -4,7 +4,7 @@ const path = require("path");
 require("dotenv").config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 /* ---------------- OPENAI SETUP ---------------- */
 
@@ -124,6 +124,67 @@ app.post("/emd-info", async (req, res) => {
     } catch (err) {
         console.error("❌ EMD error:", err);
         res.status(500).send("Error retrieving EMD information.");
+    }
+});
+
+/**
+ * Generate adapted transfer costing notes
+ * Rule: (Adapted each way × 2) − coach cost
+ */
+app.post("/adapted-transfer", async (req, res) => {
+    try {
+        const { adaptedEachWay, coachPerPerson, pax } = req.body;
+
+        const adapted = parseFloat(adaptedEachWay);
+        const coach = parseFloat(coachPerPerson);
+        const passengers = parseInt(pax, 10);
+
+        if (
+            isNaN(adapted) ||
+            isNaN(coach) ||
+            isNaN(passengers)
+        ) {
+            return res.status(400).send("Invalid costing data provided.");
+        }
+
+        const adaptedTotal = adapted * 2;
+        const coachTotal = coach * passengers;
+        const totalCost = adaptedTotal - coachTotal;
+
+        const prompt = `
+-----Adapted transfer Costing----
+
+Adapted transfer cost each way: £${adapted.toFixed(2)}
+Total adapted transfer cost (return): £${adaptedTotal.toFixed(2)}
+Coach transfer cost per person: £${coach.toFixed(2)}
+Number of passengers: ${passengers}
+Total coach transfer cost: £${coachTotal.toFixed(2)}
+Total cost to add to GWG log: £${totalCost.toFixed(2)}
+
+Write this clearly and professionally for Jet2 Assisted Travel internal notes.
+`;
+
+        const completion = await client.chat.completions.create({
+            model: "gpt-4.1-mini",
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "You write clear, professional British English notes suitable for Jet2 Assisted Travel internal records."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            temperature: 0.2
+        });
+
+        res.send(completion.choices[0].message.content);
+
+    } catch (err) {
+        console.error("❌ Adapted transfer error:", err);
+        res.status(500).send("Error generating adapted transfer notes.");
     }
 });
 
